@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чат с ИИ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #chatbox {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 400px;
+            overflow-y: scroll;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+        .user-message {
+            color: blue;
+            margin: 5px 0;
+        }
+        .bot-response {
+            color: green;
+            margin: 5px 0;
+        }
+        .input-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        #message {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
+    <script>
+        async function sendMessage() {
+            const messageInput = document.getElementById('message');
+            const userMessage = messageInput.value;
+            messageInput.value = '';
+
+            // Отображаем сообщение пользователя
+            const chatbox = document.getElementById('chatbox');
+            chatbox.innerHTML += `<div class="user-message">Вы: ${userMessage}</div>`;
+
+            // Получаем CSRF-токен
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+            // Отправляем сообщение на сервер
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken  // Добавляем CSRF-токен в заголовки
+                },
+                body: JSON.stringify({ message: userMessage })
+            });
+
+            const data = await response.json();
+            // Отображаем ответ бота
+            chatbox.innerHTML += `<div class="bot-response">Бот: ${data.response}</div>`;
+            chatbox.scrollTop = chatbox.scrollHeight; // Прокручиваем вниз
+
+            // Если бот не знает ответа, запрашиваем новый ответ
+            if (data.ask_for_answer) {
+                const userAnswer = prompt("Пожалуйста, введите правильный ответ:");
+                if (userAnswer) {
+                    await learn(userMessage, userAnswer);
+                }
+            }
+        }
+
+        async function learn(userMessage, userAnswer) {
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value; // Получаем CSRF-токен
+            await fetch('/learn', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken  // Добавляем CSRF-токен в заголовки
+                },
+                body: JSON.stringify({ message: userMessage, answer: userAnswer })
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Чат с ИИ(Beta)</h1>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> <!-- CSRF-токен -->
+    
+    <div id="chatbox"></div>
+    
+    <div class="input-container">
+        <input type="text" id="message" placeholder="Введите ваше сообщение..." />
+        <button onclick="sendMessage()">Отправить</button>
+    </div>
+    <p>
+        Чат с данным ИИ (далее DZAI ) может содержать ошибки и баги, о которых вы можете сообщать в мой телеграм: <a href="https://t.me/DZoffic">@DZofffic<a><br>
+        Исходники на Github: Нет
+    </p>
+</body>
+</html>
